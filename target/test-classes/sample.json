@@ -1,0 +1,31 @@
+{
+    "purchaseOrder": {
+        "orderContents": [
+            {
+                "fruitID": 1,
+                "fruitName": "Avocado",
+                "fruitQuantityKG": 5
+            },
+            {
+                "fruitID": 2,
+                "fruitName": "Mango",
+                "fruitQuantityKG": 50
+            },
+            {
+                "fruitID": 3,
+                "fruitName": "Passion Fruit",
+                "fruitQuantityKG": 15
+            }
+        ],
+        "orderDetails": {
+            "isReoccuring": true,
+            "orderDate": "14/02/2018",
+            "orderDescription": "A reoccuring weekly tropical fruit delivery for Sydney office",
+            "orderFirstDate": "01/01/1970",
+            "orderName": "TropicalFruitDelivery",
+            "providerID": "001",
+            "providerName": "Sydney Markets"
+        },
+        "orderID": "FruitsXXX"
+    }
+}

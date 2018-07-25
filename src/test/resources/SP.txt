@@ -1,0 +1,35 @@
+*****************************UDT's***************************************
+
+CREATE OR REPLACE TYPE FRUIT_RECORD_TYPE AS OBJECT (
+    fruitID integer,
+    fruitName varchar2(250),
+    fruitQuantity NUMBER(10,3)
+);
+
+
+CREATE OR REPLACE TYPE FRUIT_ORDER_CONTENTS_TABLE AS TABLE OF FRUIT_RECORD_TYPE;
+
+*********************STORED PROCEDURE************************************
+create or replace procedure placeOrder( 
+                          in_name               in  varchar2,
+                          in_desc               in varchar2,
+                          in_provider           in varchar2,
+                          in_order_contents_tab in out FRUIT_ORDER_CONTENTS_TABLE,
+                          out_result            out varchar2,
+                          out_order_contents_tab out FRUIT_ORDER_CONTENTS_TABLE
+                          )
+is 
+    v_var varchar2(4096);
+begin
+    for i in 1..in_order_contents_tab.count loop
+        v_var := v_var || ' +++ ' || in_order_contents_tab(i).fruitName;
+    end loop;
+    out_result := v_var || ' === from out_order_contents_tab === ';
+    v_var := '';
+    out_order_contents_tab := in_order_contents_tab;
+     for i in 1..out_order_contents_tab.count loop
+        v_var := v_var || ' +++ ' || out_order_contents_tab(i).fruitName;
+    end loop;
+    out_result := out_result || v_var;
+    in_order_contents_tab := out_order_contents_tab;
+end placeOrder;

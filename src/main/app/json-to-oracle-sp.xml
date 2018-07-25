@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule  xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:cluster="http://www.mulesoft.org/schema/mule/ee/cluster" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    
+    <!-- configuration-->
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <db:oracle-config name="Oracle_Configuration" host="localhost" port="49161" instance="xe" user="system" password="oracle" doc:name="Oracle Configuration">
+        	<db:data-types>
+    		<db:data-type name="FRUIT_ORDER_CONTENTS_TABLE" id="2003"/>
+	   		<db:data-type name="FRUIT_RECORD_TYPE" id="2002"/>
+    	</db:data-types>          
+    </db:oracle-config>
+   
+    <flow name="json-to-oracle-spFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/run" allowedMethods="post" doc:name="HTTP"/>
+        <json:json-to-object-transformer returnClass="java.lang.Object" doc:name="JSON to Object"/>
+        <logger message="#[payload]" level="INFO" category="SET_PAYLOAD" doc:name="Logger"/>
+
+        <ee:multi-transactional action="BEGIN_OR_JOIN" doc:name="Transactional">
+            <set-variable variableName="StructArrayList" value="#[new java.util.ArrayList()]" doc:name="Set Variable"/>
+            <foreach collection="#[payload.purchaseOrder.orderContents]" doc:name="For Each" counterVariableName="counterStructIndex">
+                <expression-component doc:name="Expression"><![CDATA[StructArrayList.add(dbCreateStruct('Oracle_Configuration','FRUIT_RECORD_TYPE',(ArrayList)payload.values()));]]></expression-component>
+            </foreach>
+            <logger message="The datatype is created and the payload is: #[payload] and outStructArray is: #[flowVars.StructArrayList]" level="INFO" category="ORACLE_DATA_TYPE_BEFORE_SP_CALL" doc:name="Logger"/>
+            <db:stored-procedure config-ref="Oracle_Configuration" doc:name="SP Call" >
+                <db:parameterized-query><![CDATA[CALL placeOrder(
+            :orderName,
+            :orderDesc,
+            :providerName,
+            :orderContents,
+            :results,
+            :outOrderContents)]]></db:parameterized-query>
+                <db:in-param name="orderName" type="VARCHAR" value="#[payload.purchaseOrder.orderDetails.orderName]"/>
+                <db:in-param name="orderDesc" type="VARCHAR" value="#[payload.purchaseOrder.orderDetails.orderDescription]"/>
+                <db:in-param name="providerName" type="VARCHAR" value="#[payload.purchaseOrder.orderDetails.providerName]"/>
+                <db:inout-param name="orderContents" type="FRUIT_ORDER_CONTENTS_TABLE" value="#[dbCreateArray('Oracle_Configuration','FRUIT_ORDER_CONTENTS_TABLE',flowVars.StructArrayList)]"/>
+                <db:out-param name="results" type="VARCHAR"/>
+                <db:out-param name="outOrderContents" type="FRUIT_ORDER_CONTENTS_TABLE"/>
+            </db:stored-procedure>
+            <remove-variable variableName="StructArrayList" doc:name="Remove Variable"/>
+            <foreach collection="#[payload.outOrderContents.getArray()]" counterVariableName="counterOutIndex" doc:name="For Each">
+                <logger message="Returned Struct Values are: outOrderContents is: #[(List)payload.getAttributes()]" level="INFO" category="PRINT_RETURNED_VALUES" doc:name="Logger"/>
+            </foreach>
+            <logger message="#[payload.results]" level="INFO" category="PRINT_TYPICALVALUE_OUTPUT" doc:name="Logger"/>
+            <foreach collection="#[payload.orderContents.getArray()]" counterVariableName="counterInOutIndex" doc:name="For Each">
+                <logger message="Returned Struct Values are: orderContents is: #[(List)payload.getAttributes()]" level="INFO" category="PRINT_RETURNED_VALUES_2" doc:name="Logger"/>
+            </foreach>
+        </ee:multi-transactional>
+        <logger message="The datatype is created and the payload is: #[payload]" level="INFO" category="ORACLE_DATA_TYPE_AFTER_DW_CALL" doc:name="Logger"/>
+    </flow>
+</mule>
