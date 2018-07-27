@@ -26,7 +26,6 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
         <http:listener config-ref="HTTP_Listener_Configuration" path="/run" allowedMethods="post" doc:name="HTTP"/>
         <json:json-to-object-transformer returnClass="java.lang.Object" doc:name="JSON to Object"/>
         <logger message="#[payload]" level="INFO" category="SET_PAYLOAD" doc:name="Logger"/>
-
         <ee:multi-transactional action="BEGIN_OR_JOIN" doc:name="Transactional">
             <set-variable variableName="StructArrayList" value="#[new java.util.ArrayList()]" doc:name="Set Variable"/>
             <foreach collection="#[payload.purchaseOrder.orderContents]" doc:name="For Each" counterVariableName="counterStructIndex">
